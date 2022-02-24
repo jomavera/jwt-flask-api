@@ -1,49 +1,110 @@
 const getState = ({ getStore, getActions, setStore }) => {
-	return {
-		store: {
-			message: null,
-			demo: [
-				{
-					title: "FIRST",
-					background: "white",
-					initial: "white"
-				},
-				{
-					title: "SECOND",
-					background: "white",
-					initial: "white"
-				}
-			]
-		},
-		actions: {
-			// Use getActions to call a function within a fuction
-			exampleFunction: () => {
-				getActions().changeColor(0, "green");
-			},
+  return {
+    store: {
+      token: "",
+      email: "",
+      private: "",
+    },
+    actions: {
+      // Use getActions to call a function within a fuction
+      syncTokenFromSessionStore: () => {
+        const token = sessionStorage.getItem("token");
+        if (token && token != "" && token != undefined) {
+          setStore({ token: token });
+        }
+      },
 
-			getMessage: () => {
-				// fetching data from the backend
-				fetch(process.env.BACKEND_URL + "/api/hello")
-					.then(resp => resp.json())
-					.then(data => setStore({ message: data.message }))
-					.catch(error => console.log("Error loading message from backend", error));
-			},
-			changeColor: (index, color) => {
-				//get the store
-				const store = getStore();
+      login: async (email, password) => {
+        const options = {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: email,
+            password: password,
+          }),
+        };
+        try {
+          const resp = await fetch(
+            "https://3001-4geeksacademy-reactflask-kmcp0yf172j.ws-us33.gitpod.io/api/login",
+            options
+          );
+          if (resp.status != 200) {
+            alert("Can't log in! Try again");
+            return false;
+          }
+          const data = await resp.json();
 
-				//we have to loop the entire demo array to look for the respective index
-				//and change its color
-				const demo = store.demo.map((elm, i) => {
-					if (i === index) elm.background = color;
-					return elm;
-				});
+          sessionStorage.setItem("token", data.token);
+          setStore({ token: data.token, email: data.email });
+        } catch (error) {
+          console.error("There has been an error!");
+        }
+      },
 
-				//reset the global store
-				setStore({ demo: demo });
-			}
-		}
-	};
+      signup: async (email, password) => {
+        const options = {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: email,
+            password: password,
+          }),
+        };
+        try {
+          const resp = await fetch(
+            "https://3001-4geeksacademy-reactflask-kmcp0yf172j.ws-us33.gitpod.io/api/signup",
+            options
+          );
+          if (resp.status != 200) {
+            alert("Can't sign up! Try again");
+            return false;
+          }
+          const data = await resp.json();
+
+          sessionStorage.setItem("token", data.token);
+          setStore({ token: data.token });
+        } catch (error) {
+          console.error("There has been an error!");
+        }
+      },
+
+      logout: () => {
+        sessionStorage.removeItem("token");
+        setStore({ token: null, email: "", private: "" });
+      },
+      getPrivate: async (token) => {
+        const options = {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + token,
+          },
+        };
+        try {
+          const resp = await fetch(
+            "https://3001-4geeksacademy-reactflask-kmcp0yf172j.ws-us33.gitpod.io/api/private",
+            options
+          );
+          if (!resp.ok) {
+            alert("There was a problem in the login request");
+            return false;
+          } else if (resp.status === 403) {
+            alert("Missing or invalid token");
+            return false;
+          }
+          const data = await resp.json();
+
+          setStore({ private: data.mensaje });
+        } catch (error) {
+          console.error("There has been an error!");
+        }
+      },
+    },
+  };
 };
 
 export default getState;
